@@ -1,0 +1,45 @@
+{
+  "school": {
+    "name": "현대고등학교",
+    "homepage": "https://school.use.go.kr/hdhs-h/M01"
+  },
+  "term": {
+    "name": "2026학년도 2학기",
+    "rangeStart": "2026-10-19",
+    "progressEnd": "2026-12-04",
+    "examStart": "2026-12-14",
+    "examLabel": "2학기 기말고사",
+    "lastDay": "2026-12-29"
+  },
+  "classGrade": { "316호": 2 },
+  "cards": {
+    "base": {
+      "title": "우리학교 기초자료",
+      "links": [
+        { "label": "업무분장표", "url": "" },
+        { "label": "위원회 구성·회의록", "url": "" },
+        { "label": "학교교육계획서", "url": "" },
+        { "label": "교원 연수 이수 현황", "url": "" }
+      ]
+    },
+    "drive": {
+      "title": "공유 드라이브",
+      "links": [
+        { "label": "부서별 작업 폴더", "url": "" },
+        { "label": "학년·교과 협의록", "url": "" },
+        { "label": "공문·가정통신문 서식", "url": "" },
+        { "label": "친목회", "url": "" }
+      ]
+    },
+    "portal": {
+      "title": "업무포털",
+      "links": [
+        { "label": "울산 업무포털", "url": "https://use.eduptl.kr/" },
+        { "label": "나이스", "url": "https://use.neis.go.kr/" },
+        { "label": "K-에듀파인", "url": "https://klef.use.go.kr/keris_ui/login.do" },
+        { "label": "리로스쿨", "url": "https://hdhs.riroschool.kr/" },
+        { "label": "학교 홈페이지", "url": "https://school.use.go.kr/hdhs-h/M01" }
+      ]
+    }
+  }
+}

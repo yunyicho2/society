@@ -1,0 +1,23 @@
+{
+  "name": "hdhs-online-office",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "현대고등학교 온라인 교무실 (Cloudflare Pages + Functions)",
+  "scripts": {
+    "dev": "wrangler pages dev public --d1 DB",
+    "test": "node --test \"tests/*.test.mjs\"",
+    "check": "node scripts/check-config.mjs",
+    "db:migrate": "wrangler d1 migrations apply hdhs-office --remote",
+    "db:migrate:local": "wrangler d1 migrations apply hdhs-office --local",
+    "deploy": "npm run check && npm test && wrangler pages deploy public"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.134.0"
+  },
+  "devDependencies": {
+    "jszip": "^3.10.1",
+    "wrangler": "^4.151.0"
+  },
+  "engines": { "node": ">=20" }
+}

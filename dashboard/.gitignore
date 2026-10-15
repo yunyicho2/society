@@ -1,0 +1,9 @@
+node_modules/
+.wrangler/
+.dev.vars
+*.log
+# 학생 정보가 든 파일이 실수로 들어가지 않게
+*.xlsx
+*.xls
+*.hwp
+!public/templates/*.hwpx
