@@ -146,3 +146,21 @@ test('한글(.hwp) 문단 레코드에서 글자 뽑기', () => {
   const data = Buffer.concat([rec(66, Buffer.alloc(8)), rec(67, text), rec(67, Buffer.from('  ', 'utf16le'))]);
   assert.deepEqual(paraTexts(new Uint8Array(data)), ['학교 교육계획']);
 });
+
+test('업무분장 탭: 질문과 관련된 담당자 찾기', async () => {
+  const { parseDuties } = await import('../functions/_lib/model.js');
+  const { matchDuties } = await import('../functions/_lib/duties.js');
+  const duties = parseDuties([
+    ['교무기획부', '일과', '교사가', '◦ 수업 및 평가 시간표 작성\n◦ 결강·보강·대강 내역 나이스 입력'],
+    ['교육과정부', '교과서', '교사나', '◦ 교과서 선정 및 주문'],
+    ['행정실', '영양사', '직원다', '◦ 학교급식 운영 업무 총괄'],
+    ['예시', '', '예시', '', '예시 행'],
+  ]);
+  assert.equal(duties.length, 3);
+  assert.deepEqual(duties[0].detail, ['수업 및 평가 시간표 작성', '결강·보강·대강 내역 나이스 입력']);
+  assert.deepEqual(matchDuties('시간표 짜는 사람 누구야?', duties).map(d => d.name), ['교사가']);
+  assert.deepEqual(matchDuties('교과서 주문 담당', duties).map(d => d.name), ['교사나']);
+  assert.deepEqual(matchDuties('급식 문의는?', duties).map(d => d.name), ['직원다']);
+  assert.deepEqual(matchDuties('교사나 선생님 업무', duties).map(d => d.name), ['교사나']);
+  assert.deepEqual(matchDuties('오늘 날씨 어때', duties), []);
+});

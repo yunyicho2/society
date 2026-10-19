@@ -12,6 +12,7 @@ export const RANGES = {
   boss: '관리자일정!A4:F',
   subs: '대강교체!A4:M',
   files: '그외자료!A4:F',
+  duties: '업무분장!A4:E',
 };
 
 const S = v => (v == null ? '' : String(v)).trim();
@@ -169,11 +170,19 @@ export function parseFiles(rows) {
   })).reverse();
 }
 
+// 업무분장: 부서 | 업무 | 담당자 | 세부 업무 | 비고  (세부 업무는 한 칸에 여러 줄)
+export function parseDuties(rows) {
+  return rows.filter(r => !isExample(r) && S(r[2])).map(r => ({
+    dept: S(r[0]), role: S(r[1]), name: S(r[2]).replace(/\s+/g, ''),
+    detail: S(r[3]).split(/\n+/).map(x => x.replace(/^[◦•·\-\s]+/, '').trim()).filter(Boolean),
+  }));
+}
+
 export function buildModel(v) {
   const cal = parseCalendar(v.cal || []);
   return {
     perms: parsePerms(v.perm || []), tt: parseTimetable(v.tt || []), rules: cal.rules, events: cal.events,
     duty: parseDuty(v.duty || []), plans: parsePlans(v.plan || []), boss: parseBoss(v.boss || []),
-    subs: parseSubs(v.subs || []), files: parseFiles(v.files || []),
+    subs: parseSubs(v.subs || []), files: parseFiles(v.files || []), duties: parseDuties(v.duties || []),
   };
 }
