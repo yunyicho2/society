@@ -2,6 +2,7 @@
 import { $, $$, esc, api, toast, copyText, onOpenHook, jszip } from './ui.js';
 import { maskPII } from './lib/pii.js';
 import { hwpxText } from './lib/hwpx-text.js';
+import { hwpText } from './lib/hwp-text.js';
 
 // **굵게** 와 [1] 표시만 허용하는 아주 작은 서식 변환 (나머지는 모두 글자로)
 const fmt = s => esc(s).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
@@ -81,7 +82,9 @@ export function initAdmin(ctx) {
     const files = [...e.target.files]; e.target.value = '';
     for (const f of files) {
       try {
-        const text = /\.hwpx$/i.test(f.name) ? await hwpxText(jszip(), await f.arrayBuffer()) : await f.text();
+        const text = /\.hwpx$/i.test(f.name) ? await hwpxText(jszip(), await f.arrayBuffer())
+          : /\.hwp$/i.test(f.name) ? await hwpText(await f.arrayBuffer()) : await f.text();
+        if (text.length > 1_000_000) throw new Error('글자가 100만 자를 넘음. 문서를 나눠서 올려 주세요');
         toast('"' + f.name + '" 올리는 중…', 8000);
         const r = await api('admin/docs', { method: 'POST', body: { title: f.name.replace(/\.[^.]+$/, ''), text } });
         toast('"' + f.name + '" 등록 (' + r.chunks + '조각)');

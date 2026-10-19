@@ -16,7 +16,8 @@ export async function onRequestGet({ env, data }) {
 export async function onRequestPost({ request, env, data }) {
   guard(data.user);
   const b = await readJson(request, 1_500_000);
-  const title = str(b.title, 120), text = maskPII(String(b.text || '').slice(0, 1_000_000));
+  // 공식 문서는 주민번호·휴대전화·메일만 가림 (교직원 이름·업무분장은 답에 필요)
+  const title = str(b.title, 120), text = maskPII(String(b.text || '').slice(0, 1_000_000), [], { level: 'doc' });
   if (!title || text.length < 20) throw new HttpError(400, '제목과 본문이 필요함');
   const parts = chunk(text);
   if (parts.length > 1500) throw new HttpError(413, '문서가 너무 김. 나눠서 올려 주세요');

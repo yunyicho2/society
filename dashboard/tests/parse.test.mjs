@@ -8,6 +8,7 @@ import { readXlsx } from '../public/js/lib/xlsx-read.js';
 import { parseMeals } from '../functions/_lib/neis.js';
 import { dustGrade } from '../functions/_lib/weather.js';
 import { chunk } from '../functions/_lib/rag.js';
+import { paraTexts } from '../public/js/lib/hwp-text.js';
 
 const serial = iso => (Date.parse(iso + 'T00:00:00Z') - Date.UTC(1899, 11, 30)) / 864e5;
 
@@ -123,4 +124,25 @@ test('미세먼지 등급과 문서 자르기', () => {
   const parts = chunk(Array.from({ length: 40 }, (_, i) => '제' + i + '조 ' + '가'.repeat(60)).join('\n'));
   assert.ok(parts.length > 2);
   assert.ok(parts.every(p => p.length <= 1050));
+});
+
+test('개인정보 가림: 줄을 넘지 않고, 일반 문장은 그대로', () => {
+  assert.equal(maskPII('학생\n회의실'), '학생\n회의실');
+  assert.equal(maskPII('다양한 학생 참여형 수업, 학생 현황, 위기 학생 조기 발견'), '다양한 학생 참여형 수업, 학생 현황, 위기 학생 조기 발견');
+  assert.equal(maskPII('담임 최수진께 전달, 정민호 학생 결석'), '담임 최○○께 전달, 정○○ 학생 결석');
+});
+
+test('공식 문서 올리기: 주민번호·휴대전화·메일만 가림', () => {
+  const s = maskPII('업무분장 교무기획부 김교사, 학생 현황, 문의 052-936-7800, 010-1234-5678, a@b.kr, 900101-1234567', [], { level: 'doc' });
+  assert.match(s, /김교사/);
+  assert.match(s, /052-936-7800/);
+  assert.doesNotMatch(s, /1234-5678|a@b\.kr|1234567/);
+});
+
+test('한글(.hwp) 문단 레코드에서 글자 뽑기', () => {
+  // PARA_HEADER(66) 뒤에 PARA_TEXT(67) 레코드: 글자 + 탭 + 표 제어문자(16바이트)
+  const rec = (tag, body) => { const h = Buffer.alloc(4); h.writeUInt32LE(tag | (body.length << 20)); return Buffer.concat([h, body]); };
+  const text = Buffer.concat([Buffer.from('학교', 'utf16le'), Buffer.from([9, 0]), Buffer.alloc(14), Buffer.from([11, 0]), Buffer.alloc(14), Buffer.from('교육계획', 'utf16le'), Buffer.from([13, 0])]);
+  const data = Buffer.concat([rec(66, Buffer.alloc(8)), rec(67, text), rec(67, Buffer.from('  ', 'utf16le'))]);
+  assert.deepEqual(paraTexts(new Uint8Array(data)), ['학교 교육계획']);
 });
