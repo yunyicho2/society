@@ -1,0 +1,111 @@
+# 온라인 교무실을 Cloudflare Pages에 배포 (dashboard/docs/DEPLOY.md 'GitHub Actions로 배포')
+# 필요한 저장소 비밀 값(Settings → Secrets and variables → Actions → Secrets):
+#   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID            (필수)
+#   GOOGLE_SA_EMAIL, GOOGLE_SA_KEY, ANTHROPIC_API_KEY, NEIS_API_KEY  (있으면 Pages 비밀 값으로 넣음)
+# 저장소 변수(같은 화면 → Variables): ACCESS_TEAM_DOMAIN, ACCESS_AUD, DRIVE_FOLDER_ID
+name: dashboard-deploy
+on:
+  push:
+    branches: [main, claude/compassionate-mccarthy-0662bx]
+    paths: ['dashboard/**', '.github/workflows/dashboard-deploy.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: dashboard-deploy
+  cancel-in-progress: false
+env:
+  PROJECT: hdhs-office
+  DB_NAME: hdhs-office
+  INDEX: hdhs-rules
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Cloudflare 비밀 값 확인
+        id: gate
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID 비밀 값이 없어 배포를 건너뜁니다."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+        working-directory: .
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.ok == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.ok == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - name: 설치·검사·테스트
+        if: steps.gate.outputs.ok == 'true'
+        run: |
+          npm ci
+          npm run check
+          npm test
+
+      - name: Pages 프로젝트 준비
+        if: steps.gate.outputs.ok == 'true'
+        run: |
+          if ! npx wrangler pages project list | grep -qw "$PROJECT"; then
+            npx wrangler pages project create "$PROJECT" --production-branch main
+          fi
+
+      - name: D1 준비 (없으면 만들고 wrangler.toml에 id 넣기)
+        if: steps.gate.outputs.ok == 'true'
+        run: |
+          id=$(npx wrangler d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);const d=j.find(x=>x.name===process.env.DB_NAME);process.stdout.write(d?d.uuid:"")})')
+          if [ -z "$id" ]; then
+            npx wrangler d1 create "$DB_NAME"
+            id=$(npx wrangler d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);process.stdout.write(j.find(x=>x.name===process.env.DB_NAME).uuid)})')
+          fi
+          sed -i "s/^database_id = .*/database_id = \"$id\"/" wrangler.toml
+          npx wrangler d1 migrations apply "$DB_NAME" --remote
+
+      - name: Vectorize 준비 (규정 챗봇, bge-m3 1024차원)
+        if: steps.gate.outputs.ok == 'true'
+        run: |
+          npx wrangler vectorize get "$INDEX" >/dev/null 2>&1 || npx wrangler vectorize create "$INDEX" --dimensions=1024 --metric=cosine
+
+      - name: 저장소 변수를 wrangler.toml에 반영
+        if: steps.gate.outputs.ok == 'true'
+        env:
+          ACCESS_TEAM_DOMAIN: ${{ vars.ACCESS_TEAM_DOMAIN }}
+          ACCESS_AUD: ${{ vars.ACCESS_AUD }}
+          DRIVE_FOLDER_ID: ${{ vars.DRIVE_FOLDER_ID }}
+        run: |
+          for k in ACCESS_TEAM_DOMAIN ACCESS_AUD DRIVE_FOLDER_ID; do
+            v="${!k}"
+            if [ -n "$v" ]; then sed -i "s|^$k = .*|$k = \"$v\"|" wrangler.toml; fi
+          done
+          grep -E '^(ACCESS_TEAM_DOMAIN|DRIVE_FOLDER_ID|database_id)' wrangler.toml
+
+      - name: Pages 비밀 값 넣기 (있는 것만, 배포 전에 넣어야 이번 배포에 적용)
+        if: steps.gate.outputs.ok == 'true'
+        env:
+          GOOGLE_SA_EMAIL: ${{ secrets.GOOGLE_SA_EMAIL }}
+          GOOGLE_SA_KEY: ${{ secrets.GOOGLE_SA_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NEIS_API_KEY: ${{ secrets.NEIS_API_KEY }}
+        run: |
+          for k in GOOGLE_SA_EMAIL GOOGLE_SA_KEY ANTHROPIC_API_KEY NEIS_API_KEY; do
+            v="${!k}"
+            if [ -n "$v" ]; then printf '%s' "$v" | npx wrangler pages secret put "$k" --project-name "$PROJECT" >/dev/null && echo "$k 등록"; else echo "$k 없음 (건너뜀)"; fi
+          done
+
+      - name: 배포
+        if: steps.gate.outputs.ok == 'true'
+        run: npx wrangler pages deploy public --project-name "$PROJECT" --branch main --commit-dirty=true
+
+      - name: 주소 안내
+        if: steps.gate.outputs.ok == 'true'
+        run: echo "::notice::배포 완료 → https://$PROJECT.pages.dev (Cloudflare Access 설정 전에는 API가 '설정 없음' 오류로 막혀 있음)"

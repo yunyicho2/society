@@ -86,7 +86,25 @@ npx wrangler vectorize create hdhs-rules --dimensions=1024 --metric=cosine
 
 날씨 좌표는 기본값이 울산 동구 봉수로 455 부근입니다(`WEATHER_LAT`, `WEATHER_LON`). 지도에서 확인해 고치면 됩니다.
 
-## 4. Pages 프로젝트 (GitHub 연결)
+## 4-A. (권장) GitHub Actions로 배포 — 명령어 없이
+
+저장소에 `.github/workflows/dashboard-deploy.yml`이 들어 있습니다. 비밀 값만 넣으면 GitHub가 대신 배포합니다. 3단계(D1·Vectorize 만들기)와 5단계(비밀 값 넣기)도 이 작업이 알아서 합니다.
+
+1. Cloudflare 대시보드 → 내 프로필 → **API 토큰 → 토큰 생성 → 사용자 지정 토큰**
+   - 권한(계정): `Cloudflare Pages 편집`, `D1 편집`, `Vectorize 편집`, `계정 설정 읽기`
+   - 계정 리소스: 학교 계정만
+2. GitHub 저장소 → **Settings → Secrets and variables → Actions**
+   - **Secrets**: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`(대시보드 오른쪽 '계정 ID'),
+     `GOOGLE_SA_EMAIL`, `GOOGLE_SA_KEY`(JSON의 private_key 전체), `ANTHROPIC_API_KEY`, `NEIS_API_KEY`
+   - **Variables**: `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`, `DRIVE_FOLDER_ID`
+3. **Actions → dashboard-deploy → Run workflow** (또는 `dashboard/` 아래를 고쳐 커밋하면 자동 실행)
+4. 끝나면 요약에 `https://hdhs-office.pages.dev`가 나옵니다.
+
+- 비밀 값이 없으면 작업은 배포를 건너뛰고 성공으로 끝납니다.
+- 2단계(Access)를 하기 전에는 사이트 화면은 열리지만 데이터 API가 "ACCESS 설정이 없음"으로 막혀 있습니다. 데이터가 새지 않는 안전한 상태입니다.
+- 이 방식으로 만든 Pages 프로젝트는 4단계의 'Git에 연결' 방식과 함께 쓸 수 없습니다. 둘 중 하나만 고르세요.
+
+## 4-B. Pages 프로젝트 (Cloudflare에서 GitHub 연결)
 
 1. Cloudflare 대시보드 → **Workers 및 Pages → 만들기 → Pages → Git에 연결**을 누르고 이 저장소를 고릅니다.
 2. 빌드 설정을 넣습니다.
