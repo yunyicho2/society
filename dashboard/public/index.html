@@ -170,6 +170,19 @@
         </div>
       </article>
 
+      <article class="panel wide" id="w-notes" data-card="w-notes">
+        <div class="panel-h">
+          <h3>내 메모</h3>
+          <div class="panel-tools">
+            <span class="badge b-ok"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg> 나만 보임</span>
+            <span class="cls-sub" id="noteStatus"></span>
+            <button class="btn sm" type="button" id="noteAdd">+ 새 메모</button>
+          </div>
+        </div>
+        <div class="notes" id="noteBoard"></div>
+        <p class="sub-h">자동 저장 · 어느 기기에서 로그인해도 같은 메모 · 학생 이름·번호 같은 개인정보는 적지 않기</p>
+      </article>
+
       <article class="panel wide" id="w-prog" data-card="w-prog">
         <div class="panel-h">
           <h3>내 수업 · 진도·차시 <span class="badge b-acc" id="progBadge"></span></h3>
@@ -528,6 +541,9 @@
         <h4 class="pref-h">내 수업</h4>
         <label class="field">진도 마무리일<input id="prefEnd" type="date"></label>
         <label class="field">담임 학급 (예: 1-5, 없으면 비움)<input id="prefHome" type="text" maxlength="6" placeholder="1-5"></label>
+        <span class="flab">요일별로 나누는 과목 (예: 통합사회 월화수 정치 · 목금 경제)</span>
+        <p class="cls-sub" style="margin:0">칸에 영역 이름을 적으면 그 요일 수업은 영역별로 따로 차시를 셈. 비우면 나누지 않음</p>
+        <div class="fcol" id="prefSplit"></div>
         <span class="flab">진도 관리할 수업</span>
         <div class="chips" id="prefTrack"></div>
         <span class="flab">과목 표시 이름 (시간표 약칭 → 내가 부르는 이름)</span>

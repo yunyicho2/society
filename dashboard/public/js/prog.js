@@ -1,22 +1,24 @@
 // 내 수업 · 진도·차시: 2차 범위는 모든 반 1차시부터, 최소 차시 반 기준
 import { $, $$, esc, api, toast } from './ui.js';
-import { createSchedule } from './lib/schedule.js';
+import { createSchedule, applySplit, baseSubject } from './lib/schedule.js';
 import { addDays, dow, md, mdk } from './lib/dates.js';
 
 export function initProgress(ctx) {
   const me = ctx.me.name;
   let NOTES = {}, editing = false, S = null;
 
-  // 내가 고친 시간표 칸(내 설정에 저장)을 학교 시간표에 덮어씀 — 내 화면에서만
+  // 내가 고친 시간표 칸(내 설정에 저장)을 학교 시간표에 덮어쓰고, 요일별 영역 나누기를 적용 — 내 화면에서만
   function mySchedule() {
-    const mine = Object.assign({}, ctx.D.tt[me] || {});
+    let mine = Object.assign({}, ctx.D.tt[me] || {});
     Object.entries(ctx.P.tt || {}).forEach(([k, v]) => { if (v) mine[k] = v; else delete mine[k]; });
+    mine = applySplit(mine, ctx.P.split);
     S = createSchedule(Object.assign({}, ctx.D, { tt: Object.assign({}, ctx.D.tt, { [me]: mine }) }));
     return S;
   }
+  ctx.mySchedule = () => S || mySchedule();
   const base = () => $('#baseDate').value || ctx.today;
   const end = () => ctx.P.end;
-  const subjColor = s => (!s || s === '창체' || !(s in ctx.S.subjIndex)) ? '' : 'var(--s' + ctx.S.subjIndex[s] + ')';
+  const subjColor = s => { s = baseSubject(s); return (!s || s === '창체' || !(s in ctx.S.subjIndex)) ? '' : 'var(--s' + ctx.S.subjIndex[s] + ')'; };
   ctx.subjColor = subjColor;
 
   function groups() { return S.progressSummary(me, end(), ctx.P.untrack); }
@@ -109,6 +111,8 @@ export function initProgress(ctx) {
     const i = v.lastIndexOf(' ');
     let subj = i > 0 ? v.slice(0, i) : v; const cls = i > 0 ? v.slice(i + 1) : '';
     const back = Object.entries(ctx.P.alias).find(([, a]) => a === subj); if (back) subj = back[0];
+    // 화면에 보이는 '과목(영역)'은 나누기 설정에서 온 것이므로 원래 과목 이름으로 저장
+    const b = baseSubject(subj); if (b !== subj && ctx.P.split && ctx.P.split[b]) subj = b;
     return subj + '|' + cls;
   }
   async function save() {

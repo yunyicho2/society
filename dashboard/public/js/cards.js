@@ -82,7 +82,7 @@ const MENUS = [['시간표', '진도·차시 관리', '#w-prog'], ['수업 교�
   ['결석', '출결 서류 생성', 'm-attend'], ['체험학습', '출결 서류 생성', 'm-attend'], ['출결', '출결 서류 생성', 'm-attend'], ['규정', '규정 챗봇', 'chat'],
   ['당번', '아침 안내 메시지', '#w-msg'], ['감독', '아침 안내 메시지', '#w-msg'], ['공문', '공문 작성 도우미', 'm-doc'], ['기안', '공문 작성 도우미', 'm-doc'],
   ['성과급', '그 외 자료', 'm-more'], ['그 외 자료', '그 외 자료', 'm-more'], ['자료', '그 외 자료', 'm-more'], ['진도', '진도·차시 관리', '#w-prog'], ['차시', '진도·차시 관리', '#w-prog'],
-  ['설정', '내 설정', 'm-pref'], ['식단', '오늘의 식단', '[data-card="meal"]'], ['급식', '오늘의 식단', '[data-card="meal"]'], ['나이스', '나이스', 'https://use.neis.go.kr/'],
+  ['메모', '내 메모', '#w-notes'], ['설정', '내 설정', 'm-pref'], ['식단', '오늘의 식단', '[data-card="meal"]'], ['급식', '오늘의 식단', '[data-card="meal"]'], ['나이스', '나이스', 'https://use.neis.go.kr/'],
   ['에듀파인', 'K-에듀파인', 'https://klef.use.go.kr/keris_ui/login.do'], ['업무포털', '울산 업무포털', 'https://use.eduptl.kr/'], ['리로', '리로스쿨', 'https://hdhs.riroschool.kr/']];
 
 export function initSearch() {

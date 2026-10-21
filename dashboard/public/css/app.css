@@ -423,3 +423,24 @@ button[disabled] { opacity: .6; cursor: progress; }
   body.print-mode .print-target { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; border: 0; }
   body.print-mode .fab, body.print-mode .drawer { display: none; }
 }
+.split-row { display: grid; grid-template-columns: minmax(56px, auto) repeat(5, minmax(0, 1fr)); gap: 4px; align-items: end; font-size: 14px; }
+.split-day { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--muted); }
+.split-day input { width: 100%; border: 1px solid var(--line); background: var(--surface-2); border-radius: 7px; padding: 4px 2px; text-align: center; font-size: 13px; color: var(--fg); }
+.split-day input:disabled { opacity: .35; }
+/* 내 메모 (스티키 노트) */
+:root { --n-yellow: #fff6c7; --n-pink: #fde4ec; --n-blue: #dff0fd; --n-green: #e1f5e6; --n-purple: #eee6fb; --n-ink: #2b2a22; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --n-yellow: #4a4220; --n-pink: #4a2633; --n-blue: #1d3a52; --n-green: #1f3d2a; --n-purple: #362a4d; --n-ink: #f1efe4; } }
+:root[data-theme="dark"] { --n-yellow: #4a4220; --n-pink: #4a2633; --n-blue: #1d3a52; --n-green: #1f3d2a; --n-purple: #362a4d; --n-ink: #f1efe4; }
+.notes { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+.note { background: var(--n-yellow); color: var(--n-ink); border-radius: 10px; padding: 10px 10px 6px; display: flex; flex-direction: column; gap: 6px; min-height: 150px; box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 10px rgba(0,0,0,.05); }
+.note[data-color="pink"] { background: var(--n-pink); } .note[data-color="blue"] { background: var(--n-blue); }
+.note[data-color="green"] { background: var(--n-green); } .note[data-color="purple"] { background: var(--n-purple); }
+.note.pinned { outline: 2px solid var(--accent); outline-offset: -2px; }
+.note textarea { flex: 1; min-height: 100px; border: 0; background: transparent; resize: none; font: inherit; font-size: 15px; line-height: 1.55; color: inherit; outline: none; }
+.note-f { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 12.5px; opacity: .85; }
+.note-f .when { margin-left: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.note-f button { border: 0; background: transparent; cursor: pointer; padding: 2px 4px; border-radius: 6px; color: inherit; font-size: 13px; white-space: nowrap; }
+.note-f button:hover { background: rgba(0,0,0,.08); }
+.note-f .dot { width: 14px; height: 14px; border-radius: 50%; padding: 0; border: 1px solid rgba(0,0,0,.2); }
+.note-warn { font-size: 12.5px; color: var(--bad); }
+.notes .empty { grid-column: 1 / -1; }

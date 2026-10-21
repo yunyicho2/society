@@ -184,3 +184,18 @@ export function awayLessons(S, teacher, range) {
   }
   return { away, lessons: out };
 }
+
+// 같은 과목을 요일마다 다른 영역으로 가르칠 때 (예: 통합사회 월화수 '정치', 목금 '경제')
+// split = { 과목: { 요일(0=월): '영역' } } → 그 칸의 과목 이름을 '과목(영역)'으로 바꿔 진도를 따로 셈
+export const splitName = (subj, label) => subj + '(' + label + ')';
+export const baseSubject = s => String(s || '').replace(/\([^()]*\)$/, '');
+export function applySplit(slots, split) {
+  if (!split || !Object.keys(split).length) return slots;
+  const out = {};
+  Object.entries(slots).forEach(([k, v]) => {
+    const [subj, cls = ''] = v.split('|'), w = k.split('-')[0];
+    const label = split[subj] && String(split[subj][w] || '').trim();
+    out[k] = label ? splitName(subj, label) + '|' + cls : v;
+  });
+  return out;
+}

@@ -4,7 +4,7 @@ import { mdk } from './lib/dates.js';
 
 export const CARDS = [['meal', '오늘의 식단'], ['sched', '오늘의 일정'], ['base', '우리학교 기초자료'], ['drive', '공유 드라이브'], ['portal', '업무포털'],
   ['t-chat', '도구 · 규정 챗봇'], ['t-attend', '도구 · 출결 서류 생성'], ['t-doc', '도구 · 공문 작성 도우미'], ['t-swap', '도구 · 수업 변경 신청'], ['t-prog', '도구 · 진도·차시 관리'],
-  ['w-sub', '대강·교체 현황'], ['w-prog', '내 수업 · 진도·차시']];
+  ['w-sub', '대강·교체 현황'], ['w-notes', '내 메모'], ['w-prog', '내 수업 · 진도·차시']];
 const QUICK = ['meal', 'sched', 'base', 'drive', 'portal'];
 
 export function initPrefs(ctx, saved) {
@@ -19,6 +19,7 @@ export function initPrefs(ctx, saved) {
     P.end = /^\d{4}-\d{2}-\d{2}$/.test(P.end || '') ? P.end : ctx.D.progressEnd;
     P.home = typeof P.home === 'string' ? P.home : '';
     P.theme = ['light', 'dark'].includes(P.theme) ? P.theme : '';
+    P.split = P.split && typeof P.split === 'object' && !Array.isArray(P.split) ? P.split : {};
   };
   fix();
   ctx.alias = s => P.alias[s] || s;
@@ -52,7 +53,13 @@ export function initPrefs(ctx, saved) {
     }).join('');
     $('#prefEnd').value = P.end;
     $('#prefHome').value = P.home;
-    const rows = ctx.S.remaining(ctx.me.name, ctx.D.rangeStart, ctx.D.lastDay);
+    // 요일별 나누기: 내 시간표에 나오는 과목마다 월~금 칸 (그 과목이 있는 요일만 입력 가능)
+    const days = {};
+    Object.entries(ctx.D.tt[ctx.me.name] || {}).forEach(([k, v]) => { const s = v.split('|')[0]; if (s !== '창체') (days[s] = days[s] || new Set()).add(Number(k.split('-')[0])); });
+    $('#prefSplit').innerHTML = Object.keys(days).sort().map(s => '<div class="split-row"><span>' + esc(ctx.alias(s)) + '</span>' +
+      '월화수목금'.split('').map((d, w) => '<label class="split-day"><small>' + d + '</small><input type="text" maxlength="8" data-split="' + esc(s) + '" data-w="' + w + '"' +
+        (days[s].has(w) ? ' value="' + esc((P.split[s] || {})[w] || '') + '"' : ' disabled') + '></label>').join('') + '</div>').join('') || '<span class="cls-sub">시간표에 내 수업이 없음</span>';
+    const rows = (ctx.mySchedule ? ctx.mySchedule() : ctx.S).remaining(ctx.me.name, ctx.D.rangeStart, ctx.D.lastDay);
     $('#prefTrack').innerHTML = rows.map(r => { const k = r.subj + ' ' + r.cls; return '<label><input type="checkbox" data-track="' + esc(k) + '"' + (P.untrack.includes(k) ? '' : ' checked') + '>' + esc(r.cls + ' ' + ctx.alias(r.subj)) + '</label>'; }).join('') || '<span class="cls-sub">시간표에 내 수업이 없음 (권한 탭 이름과 시간표 이름이 같은지 확인)</span>';
     const subs = [...new Set(rows.map(r => r.subj))];
     $('#prefAlias').innerHTML = subs.map(s => '<label class="alias-row"><span>' + esc(s) + '</span><input type="text" maxlength="20" data-alias="' + esc(s) + '" value="' + esc(P.alias[s] || '') + '" placeholder="' + esc(s) + '"></label>').join('');
@@ -66,6 +73,11 @@ export function initPrefs(ctx, saved) {
     const el = e.target;
     if (el.dataset.show) { P.hide = P.hide.filter(k => k !== el.dataset.show); if (!el.checked) P.hide.push(el.dataset.show); }
     else if (el.dataset.track) { P.untrack = P.untrack.filter(k => k !== el.dataset.track); if (!el.checked) P.untrack.push(el.dataset.track); }
+    else if (el.dataset.split) {
+      const sp = P.split[el.dataset.split] = P.split[el.dataset.split] || {}, v = el.value.trim().replace(/[()|]/g, '');
+      if (v) sp[el.dataset.w] = v; else delete sp[el.dataset.w];
+      if (!Object.keys(sp).length) delete P.split[el.dataset.split];
+    }
     else if (el.dataset.alias) { if (el.value.trim()) P.alias[el.dataset.alias] = el.value.trim(); else delete P.alias[el.dataset.alias]; }
     else if (el.id === 'prefEnd') P.end = el.value || ctx.D.progressEnd;
     else if (el.id === 'prefHome') { const v = el.value.trim(); if (v && !/^[123]-\d{1,2}$/.test(v)) { toast('담임 학급은 1-5 처럼 적어 주세요'); return; } P.home = v; }

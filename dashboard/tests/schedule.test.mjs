@@ -96,3 +96,18 @@ test('아침 안내 메시지: 야간자습 시간·대강 줄 없음, 교통·�
   assert.doesNotMatch(msg, /18:40|대강/);
   assert.match(msg, /16:40 교직원 연수 \(시청각실\)/);
 });
+
+test('요일별 영역 나누기: 통합사회 월화수 정치, 목금 경제', async () => {
+  const { applySplit, baseSubject } = await import('../public/js/lib/schedule.js');
+  const slots = { '0-1': '통합사회|1-1', '2-3': '통합사회|1-2', '3-1': '통합사회|1-1', '4-6': '통합사회|1-3', '1-7': '창체|' };
+  const split = { 통합사회: { 0: '정치', 1: '정치', 2: '정치', 3: '경제', 4: '경제' } };
+  const out = applySplit(slots, split);
+  assert.equal(out['0-1'], '통합사회(정치)|1-1');
+  assert.equal(out['3-1'], '통합사회(경제)|1-1');
+  assert.equal(out['1-7'], '창체|');
+  assert.equal(baseSubject('통합사회(경제)'), '통합사회');
+  const S2 = createSchedule({ ...D, tt: { ...D.tt, 갑: applySplit(D.tt['갑'], { 통합사회: { 0: '정치', 2: '정치', 4: '경제' } }) } });
+  const subjects = S2.progressSummary('갑', '2026-10-30').map(g => g.subj).sort();
+  assert.deepEqual(subjects, ['통합사회(경제)', '통합사회(정치)']);
+  assert.equal(applySplit(slots, {}), slots);
+});

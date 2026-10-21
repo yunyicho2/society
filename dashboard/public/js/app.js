@@ -8,6 +8,7 @@ import { initProgress } from './prog.js';
 import { initSwap } from './swap.js';
 import { initForms } from './forms.js';
 import { initChat, initDoc, initMore, initAdmin } from './tools.js';
+import { initNotes } from './notes.js';
 
 async function main() {
   initModals();
@@ -58,6 +59,7 @@ async function main() {
   initDoc();
   initMore();
   initAdmin(ctx);
+  initNotes();
 }
 
 main();
