@@ -444,3 +444,10 @@ button[disabled] { opacity: .6; cursor: progress; }
 .note-f .dot { width: 14px; height: 14px; border-radius: 50%; padding: 0; border: 1px solid rgba(0,0,0,.2); }
 .note-warn { font-size: 12.5px; color: var(--bad); }
 .notes .empty { grid-column: 1 / -1; }
+/* 날짜별 수업 지정 */
+.mark-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; }
+.mark-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; }
+.mark-list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 9px; padding: 8px 10px; }
+table.plan tr.perf td { background: var(--s3); }
+@media (max-width: 860px) { .mark-grid { grid-template-columns: 1fr; } }
+.mark-list .mini { white-space: nowrap; flex: none; }

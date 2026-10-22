@@ -111,3 +111,25 @@ test('요일별 영역 나누기: 통합사회 월화수 정치, 목금 경제',
   assert.deepEqual(subjects, ['통합사회(경제)', '통합사회(정치)']);
   assert.equal(applySplit(slots, {}), slots);
 });
+
+test('날짜별 수업 지정: 수행평가는 차시에서 빼고, 영역 바꾸기·수업 없음 반영', () => {
+  const marks = [
+    { from: '2026-10-26', to: '2026-10-30', type: 'perf' },                                   // 수행평가 주간 (모든 수업)
+    { from: '2026-10-21', cls: '1-1', subj: '통합사회', type: 'move', toSubj: '통합사회(경제)' }, // 그날 1-1은 경제로
+    { from: '2026-10-19', cls: '1-2', type: 'skip' },                                         // 교체로 빠진 수업
+  ];
+  const S3 = createSchedule({ ...D, marks, marksFor: '갑' });
+  const row = (subj, cls) => S3.lessonSeq('갑', '2026-10-30').find(r => r.subj === subj && r.cls === cls);
+  assert.deepEqual(row('통합사회', '1-1').dates.map(x => x.d), ['2026-10-19']);
+  assert.deepEqual(row('통합사회', '1-1').perf.map(x => x.d), ['2026-10-26', '2026-10-28']);
+  assert.deepEqual(row('통합사회(경제)', '1-1').dates, [{ d: '2026-10-21', p: 1, from: '통합사회' }]);
+  assert.deepEqual(row('통합사회', '1-2').dates.map(x => x.d), ['2026-10-21']);
+  assert.deepEqual(row('통합사회', '1-3').perf.map(x => x.d), ['2026-10-26', '2026-10-30']);
+  // 다른 교사 시간표에는 적용되지 않음
+  assert.equal(S3.lessonSeq('병', '2026-10-30').every(r => r.perf.length === 0), true);
+  // 오늘 수업 표시
+  const mon = S3.lessonsOn('갑', '2026-10-26');
+  assert.equal(mon[0].mark.type, 'perf');
+  const skip = S3.lessonsOn('갑', '2026-10-19').find(l => l.cls === '1-2');
+  assert.equal(skip.off, true);
+});

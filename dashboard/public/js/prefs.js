@@ -20,6 +20,7 @@ export function initPrefs(ctx, saved) {
     P.home = typeof P.home === 'string' ? P.home : '';
     P.theme = ['light', 'dark'].includes(P.theme) ? P.theme : '';
     P.split = P.split && typeof P.split === 'object' && !Array.isArray(P.split) ? P.split : {};
+    P.marks = Array.isArray(P.marks) ? P.marks.filter(m => m && /^\d{4}-\d{2}-\d{2}$/.test(m.from) && ['perf', 'move', 'skip'].includes(m.type)).slice(-100) : [];
   };
   fix();
   ctx.alias = s => P.alias[s] || s;

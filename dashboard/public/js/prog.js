@@ -12,7 +12,7 @@ export function initProgress(ctx) {
     let mine = Object.assign({}, ctx.D.tt[me] || {});
     Object.entries(ctx.P.tt || {}).forEach(([k, v]) => { if (v) mine[k] = v; else delete mine[k]; });
     mine = applySplit(mine, ctx.P.split);
-    S = createSchedule(Object.assign({}, ctx.D, { tt: Object.assign({}, ctx.D.tt, { [me]: mine }) }));
+    S = createSchedule(Object.assign({}, ctx.D, { tt: Object.assign({}, ctx.D.tt, { [me]: mine }), marks: ctx.P.marks || [], marksFor: me }));
     return S;
   }
   ctx.mySchedule = () => S || mySchedule();
@@ -34,7 +34,7 @@ export function initProgress(ctx) {
         const n = r.dates.length, done = r.dates.filter(x => x.d < base()).length, extra = n - min;
         const tag = rows.length < 2 ? '' : n === max && max > min ? '<span class="badge b-acc">가장 많음</span>' : n === min && max > min ? '<span class="badge b-warn">가장 적음</span>' : '';
         html += '<tr><td>' + esc(r.cls) + ' ' + esc(ctx.alias(r.subj)) + '<br><span class="mini-meter"><i style="width:' + (n ? Math.round(done / n * 100) : 0) + '%"></i></span></td>' +
-          '<td>' + done + '차시</td><td><b>' + n + '</b>차시</td><td>' + (rows.length < 2 ? '-' : extra ? '+' + extra + ' 복습·보충' : '기준') + '</td><td>' + tag + '</td></tr>';
+          '<td>' + done + '차시</td><td><b>' + n + '</b>차시' + (r.perf && r.perf.length ? '<br><span class="cls-sub">+ 수행평가 ' + r.perf.length + '</span>' : '') + '</td><td>' + (rows.length < 2 ? '-' : extra ? '+' + extra + ' 복습·보충' : '기준') + '</td><td>' + tag + '</td></tr>';
       });
     });
     $('#progSum').innerHTML = sum;
@@ -43,7 +43,9 @@ export function initProgress(ctx) {
 
   function todayBox() {
     const seq = S.lessonSeq(me, end(), ctx.P.untrack);
-    const idx = l => { const r = seq.find(x => x.subj === l.subj && x.cls === l.cls); if (!r) return 0; return r.dates.findIndex(x => x.d === l.date && x.p === l.p) + 1; };
+    const subjOf = l => (l.mark && l.mark.type === 'move' ? l.mark.toSubj : l.subj);
+    const idx = l => { if (l.mark && l.mark.type === 'perf') return 0; const r = seq.find(x => x.subj === subjOf(l) && x.cls === l.cls); if (!r) return 0; return r.dates.findIndex(x => x.d === l.date && x.p === l.p) + 1; };
+    const tagOf = l => (l.mark && l.mark.type === 'perf' ? ' · <b>수행평가</b>' : '');
     const b = base(), ls = S.lessonsOn(me, b), live = ls.filter(l => !l.off);
     $('#todayHead').textContent = mdk(b) + ' 수업';
     let html = '';
@@ -56,11 +58,11 @@ export function initProgress(ctx) {
       }
     } else {
       html += '<ul class="check">' + live.map(l => {
-        const k = idx(l), note = k && (NOTES[l.subj] || [])[k - 1];
-        return '<li><label><input type="checkbox"><span class="p">' + l.p + '교시 ' + esc(l.cls) + '</span><span class="tx">' + esc(ctx.alias(l.subj)) + (k ? ' · ' + k + '차시' : '') + (note && note.unit ? ' · ' + esc(note.unit) : '') + '</span></label></li>';
+        const k = idx(l), note = k && (NOTES[subjOf(l)] || [])[k - 1];
+        return '<li><label><input type="checkbox"><span class="p">' + l.p + '교시 ' + esc(l.cls) + '</span><span class="tx">' + esc(ctx.alias(subjOf(l))) + (k ? ' · ' + k + '차시' : '') + tagOf(l) + (note && note.unit ? ' · ' + esc(note.unit) : '') + '</span></label></li>';
       }).join('') + '</ul>';
       const offs = ls.filter(l => l.off);
-      if (offs.length) html += '<p class="cls-sub">학사일정으로 빠지는 수업: ' + offs.map(l => l.p + '교시 ' + esc(l.cls)).join(', ') + '</p>';
+      if (offs.length) html += '<p class="cls-sub">빠지는 수업 (학사일정·날짜별 지정): ' + offs.map(l => l.p + '교시 ' + esc(l.cls)).join(', ') + '</p>';
     }
     $('#todayBox').innerHTML = html;
   }
@@ -91,12 +93,75 @@ export function initProgress(ctx) {
       const n = notes[k - 1] || {};
       h += '<tr class="' + (k > g.min ? 'extra' : '') + '"><td>' + k + (k === g.min ? '<br><span class="cls-sub">최소 기준</span>' : '') + '</td>' +
         '<td class="ed" data-f="unit">' + esc(n.unit || '') + '</td><td class="ed" data-f="content">' + esc(n.content || '') + '</td>' +
-        g.rows.map(r => { const x = r.dates[k - 1]; return '<td class="' + (x && x.d < b ? 'past' : '') + '">' + (x ? md(x.d) + ' ' + x.p + '교시' : '—') + '</td>'; }).join('') + '</tr>';
+        g.rows.map(r => { const x = r.dates[k - 1]; return '<td class="' + (x && x.d < b ? 'past' : '') + '">' + (x ? md(x.d) + ' ' + x.p + '교시' + (x.from ? '<br><span class="cls-sub">' + esc(ctx.alias(x.from)) + ' 시간</span>' : '') : '—') + '</td>'; }).join('') + '</tr>';
+    }
+    const perfMax = Math.max(0, ...g.rows.map(r => (r.perf || []).length));
+    for (let k = 0; k < perfMax; k++) {
+      h += '<tr class="perf"><td>수행평가' + (perfMax > 1 ? ' ' + (k + 1) : '') + '</td><td></td><td></td>' +
+        g.rows.map(r => { const x = (r.perf || [])[k]; return '<td class="' + (x && x.d < b ? 'past' : '') + '">' + (x ? md(x.d) + ' ' + x.p + '교시' : '—') + '</td>'; }).join('') + '</tr>';
     }
     $('#planTable').innerHTML = h + '</tbody>';
   }
 
-  function render() { mySchedule(); progRows(); todayBox(); ttTable(); planTable(); setEditing(false); }
+  // 날짜별 수업 지정 (수행평가 / 다른 영역으로 / 수업 없음) — 내 설정(marks)에 저장
+  const TYPE = { perf: '수행평가', move: '다른 영역으로', skip: '수업 없음' };
+  const mySubjects = () => [...new Set(S.slots(me).filter(x => x.subj !== '창체').map(x => x.subj))].sort();
+  const myClasses = () => [...new Set(S.slots(me).filter(x => x.subj !== '창체').map(x => x.cls))].sort();
+  const describe = m => {
+    const when = m.to && m.to !== m.from ? mdk(m.from) + ' ~ ' + mdk(m.to) : mdk(m.from);
+    const what = [m.cls || '모든 반', m.subj ? ctx.alias(m.subj) : '모든 과목', m.p ? m.p + '교시' : ''].filter(Boolean).join(' · ');
+    return '<b>' + when + '</b> ' + esc(what) + ' → ' + (m.type === 'move' ? esc(ctx.alias(m.toSubj)) + ' 수업' : TYPE[m.type]);
+  };
+  // 규칙 하나에 걸리는 수업 (학사일정으로 빠지는 날은 제외)
+  function hits(m) {
+    const T = createSchedule(Object.assign({}, S.D, { marks: [m], marksFor: me })), out = [];
+    for (let d = m.from; d && d <= (m.to || m.from); d = addDays(d, 1)) T.lessonsOn(me, d).forEach(l => { if (l.mark && !(l.off && l.mark.type !== 'skip')) out.push(l); });
+    return out;
+  }
+  function markForm() {
+    const v = id => $('#' + id).value;
+    const keep = { cls: v('mk-cls'), subj: v('mk-subj'), to: v('mk-to') };
+    $('#mk-cls').innerHTML = '<option value="">모든 반</option>' + myClasses().map(c => '<option>' + esc(c) + '</option>').join('');
+    const subs = mySubjects();
+    const bases = [...new Set(subs.map(baseSubject).filter(b => !subs.includes(b)))];
+    $('#mk-subj').innerHTML = '<option value="">모든 과목</option>' + bases.concat(subs).map(x => '<option value="' + esc(x) + '">' + esc(ctx.alias(x)) + '</option>').join('');
+    $('#mk-to').innerHTML = subs.map(x => '<option value="' + esc(x) + '">' + esc(ctx.alias(x)) + '</option>').join('');
+    ['cls', 'subj', 'to'].forEach(k => { const el = $('#mk-' + k); if ([...el.options].some(o => o.value === keep[k])) el.value = keep[k]; });
+    if (!v('mk-from')) $('#mk-from').value = base();
+    markPreview();
+    const list = ctx.P.marks || [];
+    $('#markList').innerHTML = list.length ? list.map((m, i) => '<li><span>' + describe(m) + ' <span class="cls-sub">(' + hits(m).length + '개 수업)</span></span><button class="mini" type="button" data-unmark="' + i + '">삭제</button></li>').join('')
+      : '<li class="cls-sub">지정한 날이 없음</li>';
+  }
+  function draft() {
+    const v = id => $('#' + id).value, type = (document.querySelector('input[name="mk-type"]:checked') || {}).value || 'perf';
+    const m = { from: v('mk-from'), to: v('mk-to-date') || v('mk-from'), type };
+    if (v('mk-cls')) m.cls = v('mk-cls'); if (v('mk-subj')) m.subj = v('mk-subj'); if (v('mk-p')) m.p = Number(v('mk-p'));
+    if (type === 'move') m.toSubj = v('mk-to');
+    return m;
+  }
+  function markPreview() {
+    $('#mk-to-wrap').hidden = ((document.querySelector('input[name="mk-type"]:checked') || {}).value !== 'move');
+    const m = draft(); if (!m.from) { $('#markPreview').textContent = ''; return; }
+    const h = hits(m);
+    $('#markPreview').textContent = h.length ? '해당 수업 ' + h.length + '개: ' + h.slice(0, 8).map(l => md(l.date) + ' ' + l.p + '교시 ' + l.cls).join(', ') + (h.length > 8 ? ' …' : '') : '해당하는 수업이 없음';
+  }
+  $('#t-mark').addEventListener('change', markPreview);
+  $('#markAdd').addEventListener('click', () => {
+    const m = draft();
+    if (!m.from) { toast('시작일을 고르세요'); return; }
+    if (m.to < m.from) { toast('끝 날짜가 시작일보다 앞이에요'); return; }
+    if (m.type === 'move' && m.subj === m.toSubj) { toast('바꿀 영역이 원래 과목과 같아요'); return; }
+    if (!hits(m).length) { toast('그 조건에 해당하는 수업이 없어요'); return; }
+    ctx.P.marks = (ctx.P.marks || []).concat([m]).slice(-100);
+    ctx.savePrefs(); render(); toast('지정함 · 진도 계산에 바로 반영');
+  });
+  $('#markList').addEventListener('click', e => {
+    const b = e.target.closest('[data-unmark]'); if (!b) return;
+    ctx.P.marks.splice(Number(b.dataset.unmark), 1); ctx.savePrefs(); render();
+  });
+
+  function render() { mySchedule(); progRows(); todayBox(); ttTable(); planTable(); markForm(); setEditing(false); }
 
   // 편집: 내 시간표 칸 / 차시 진도표 단원·내용
   const editBtn = $('#editBtn');
@@ -137,7 +202,7 @@ export function initProgress(ctx) {
     if (editing) render();
     $$('[data-tab]').forEach(x => x.setAttribute('aria-selected', String(x === b)));
     $$('.tabpane').forEach(p => { p.hidden = p.id !== b.dataset.tab; });
-    editBtn.hidden = b.dataset.tab === 't-now';
+    editBtn.hidden = b.dataset.tab === 't-now' || b.dataset.tab === 't-mark';
   }));
   $('#w-prog').addEventListener('input', e => { if (e.target.closest('table.tt')) e.target.classList.add('changed'); });
   $('#w-prog').addEventListener('keydown', e => { if (editing && e.key === 'Enter' && e.target.isContentEditable) { e.preventDefault(); e.target.blur(); } });

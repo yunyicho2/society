@@ -51,10 +51,30 @@ export function createSchedule(D) {
   const busy = (name, w, p) => !!(tt[name] || {})[w + '-' + p];
   const cellOf = (name, w, p) => { const v = (tt[name] || {})[w + '-' + p]; if (!v) return { s: '', c: '' }; const [s, c] = v.split('|'); return { s, c: c || '' }; };
 
+  // 날짜별 수업 지정 (선생님 본인 화면에서만): 수행평가 / 다른 과목·영역으로 / 수업 없음
+  // marks = [{ from, to, cls?, subj?, p?, type: 'perf'|'move'|'skip', toSubj? }] — 나중에 넣은 규칙이 우선
+  const marks = Array.isArray(D.marks) ? D.marks : [];
+  function markOf(name, date, s) {
+    if (!marks.length || name !== D.marksFor) return null;
+    for (let i = marks.length - 1; i >= 0; i--) {
+      const m = marks[i];
+      if (!m || date < m.from || date > (m.to || m.from)) continue;
+      if (m.cls && m.cls !== s.cls) continue;
+      if (m.subj && m.subj !== s.subj && m.subj !== baseSubject(s.subj)) continue;
+      if (m.p && Number(m.p) !== s.p) continue;
+      if (m.type === 'move' && !m.toSubj) continue;
+      return m;
+    }
+    return null;
+  }
+
   function lessonsOn(name, date) {
     const w = dow(date) - 1; if (w < 0 || w > 4) return [];
     return slots(name).filter(s => s.w === w && s.subj !== '창체').sort((a, b) => a.p - b.p)
-      .map(s => Object.assign({}, s, { date, off: noClass(date, gradeOf(s.cls), s.p) }));
+      .map(s => {
+        const m = markOf(name, date, s), off = noClass(date, gradeOf(s.cls), s.p);
+        return Object.assign({}, s, { date, off: off || (m && m.type === 'skip'), mark: off ? null : m });
+      });
   }
 
   // 기간 안에서 과목·학급별 실제 수업 수와 학사일정으로 빠지는 수
@@ -78,7 +98,12 @@ export function createSchedule(D) {
       const w = dow(d) - 1; if (w < 0 || w > 4) continue;
       slots(name).filter(s => s.w === w && s.subj !== '창체').sort((a, b) => a.p - b.p).forEach(s => {
         if (noClass(d, gradeOf(s.cls), s.p)) return;
-        const k = s.subj + ' ' + s.cls; (map[k] = map[k] || { subj: s.subj, cls: s.cls, dates: [] }).dates.push({ d, p: s.p });
+        const m = markOf(name, d, s);
+        if (m && m.type === 'skip') return;
+        const subj = m && m.type === 'move' ? m.toSubj : s.subj;
+        const k = subj + ' ' + s.cls, row = map[k] = map[k] || { subj, cls: s.cls, dates: [], perf: [] };
+        if (m && m.type === 'perf') row.perf.push({ d, p: s.p });
+        else row.dates.push(m && m.type === 'move' ? { d, p: s.p, from: s.subj } : { d, p: s.p });
       });
     }
     return Object.values(map).filter(r => !untrack.includes(r.subj + ' ' + r.cls))
